@@ -1,6 +1,3 @@
-# MavTourneyBracket
-MavLab's Tournament Bracket Repository. 
-
 # MavTourneyBracket  
 *A Modern, Open-Source Tournament Bracket System for Student Organizations*
 
@@ -8,15 +5,15 @@ MavLab's Tournament Bracket Repository.
 
 ## Overview
 
-**MavTourneyBracket** is an open-source tournament bracket management system developed by **MavLabs** to support student organizations, academic competitions, esports events, and research-driven experimentation in software engineering and cybersecurity.
+**MavTourneyBracket** is an open-source tournament bracket management system developed by **MavLabs**.
 
-The project is designed to serve three primary purposes:
+The project is designed to serve primary purposes:
 
 1. **A real-world software engineering portfolio project**
 2. **A teaching and learning platform for student developers**
-3. **A research and experimentation environment for system design and security**
+3. **A research and experimentation environment for system design**
 
-MavTourneyBracket aims to demonstrate professional-grade development practices while remaining accessible to student contributors.
+MavTourneyBracket aims to demonstrate development practices while remaining accessible to student contributors.
 
 ---
 
@@ -31,7 +28,7 @@ MavTourneyBracket aims to demonstrate professional-grade development practices w
 - Administrative dashboard
 - Role-based access control (planned)
 - Responsive web interface
-- API-first architecture (in progress)
+
 
 ---
 
@@ -53,9 +50,10 @@ This project is designed for:
 
 - Student organizations running events
 - Faculty hosting classroom competitions
-- Esports clubs and hackathons
+- Hackathons
 - Research teams exploring system design
 - Developers building portfolio projects
+- Anyone who needs a tournament bracket
 
 It is intentionally built to be:
 - readable
@@ -79,7 +77,7 @@ It is intentionally built to be:
 - Git
 - Virtual environment tool (`venv`, `pipenv`, or `poetry`)
 
-### Installation
+### Installation (This is probably not real yet.) 
 
 ```bash
 git clone https://github.com/UNO-MavLabs/MavTourneyBracket.git
