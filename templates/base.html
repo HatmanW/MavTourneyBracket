@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Base Template{% endblock %}</title>
+
+    <!-- Bootstrap CSS (CDN with fallback) -->
+    <link id="bootstrap-css" rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+          integrity="sha384-ENjdO4Dr2bkBIFxQpeoYz1+6uNQApFmC26EwAOH8WgZl5/ELQb2G8oq3O5pJp6t2"
+          crossorigin="anonymous">
+
+    <script>
+        window.addEventListener('load', function () {
+            var testEl = document.createElement('div');
+            testEl.className = 'd-none';
+            document.body.appendChild(testEl);
+            if (getComputedStyle(testEl).display !== 'none') {
+                // Fallback if CDN fails
+                var localCSS = document.createElement('link');
+                localCSS.rel = 'stylesheet';
+                localCSS.href = "{% static 'bootstrap-5.3.7-dist/css/bootstrap.min.css' %}";
+                document.head.appendChild(localCSS);
+            }
+            document.body.removeChild(testEl);
+        });
+    </script>
+
+    <!-- Bootstrap JS (CDN with fallback) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-Q6EZqj9P0+GJjsH6czTOGdP5fw2q8iDzVc5P4G7aq1z2u5L9vdwMWwM8mXYvoJpM"
+            crossorigin="anonymous"
+            onerror="this.onerror=null;this.src='{% static 'bootstrap-5.3.7-dist/js/bootstrap.bundle.min.js' %}';">
+    </script>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="{% url 'home' %}">Base Template</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+      aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item">
+          <a class="nav-link" href="{% url 'about' %}">About</a>
+        </li>
+        {% if user.is_authenticated %}
+        <li class="nav-item">
+          <a class="nav-link" href="{% url 'profile' %}">Profile</a>
+        </li>
+        {% endif %}
+      </ul>
+
+      <ul class="navbar-nav">
+        {% if user.is_authenticated %}
+        <li class="nav-item">
+          <form method="POST" action="{% url 'logout' %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="nav-link btn btn-link px-2 text-decoration-none">Logout</button>
+          </form>
+        </li>
+        {% else %}
+        <li class="nav-item">
+          <a class="nav-link" href="{% url 'login' %}">Login</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{% url 'register' %}">Register</a>
+        </li>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Flash messages -->
+<div class="container mt-3">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+</div>
+
+<!-- Page content -->
+<div class="container mt-4">
+    {% block content %}{% endblock %}
+</div>
+
+</body>
+</html>
