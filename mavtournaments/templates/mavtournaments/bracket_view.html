@@ -1,0 +1,59 @@
+<!-- mavtournaments/templates/mavtournaments/bracket_view.html -->
+{% extends "base.html" %}
+{% block title %}{{ t.name }} — Bracket{% endblock %}
+{% block content %}
+
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'tournaments:index' %}">Tournaments</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ t.name }} — Bracket</li>
+  </ol>
+</nav>
+
+<div class="d-flex gap-2 mb-3">
+  <a href="{% url 'tournaments:teams' t.id %}" class="btn btn-outline-secondary btn-sm">Teams</a>
+  <a href="{% url 'tournaments:index' %}" class="btn btn-outline-secondary btn-sm">← Back to Tournaments</a>
+</div>
+
+<div id="bracket" style="overflow-x:auto;"></div>
+
+<link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/jquery-bracket@0.11.1/dist/jquery.bracket.min.css">
+<script src="https://code.jquery.com/jquery-3.7.1.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/jquery-bracket@0.11.1/dist/jquery.bracket.min.js"></script>
+
+<script>
+(function () {
+  const dataUrl = "{% url 'tournaments:bracket_data' t.id %}";
+  const canEdit = {{ can_edit|yesno:"true,false" }};
+
+  function draw(data) {
+    // If nothing is seeded yet, show a friendly hint
+    const hasTeams = Array.isArray(data.teams) && data.teams.length > 0;
+    if (!hasTeams) {
+      const hint = document.createElement('div');
+      hint.className = 'alert alert-info mb-3';
+      hint.textContent = 'No bracket generated yet. An admin or scorekeeper can seed the bracket from the Teams page.';
+      document.getElementById('bracket').before(hint);
+    }
+
+    $('#bracket').bracket({
+      init: data,
+      skipConsolationRound: true,
+      teamWidth: 160,
+      matchMargin: 18,
+      roundMargin: 48,
+      save: canEdit ? function(){ console.log('inline edit not wired'); } : null
+    });
+  }
+
+  fetch(dataUrl).then(r => r.json()).then(draw).catch(() => {
+    const err = document.createElement('div');
+    err.className = 'alert alert-danger';
+    err.textContent = 'Failed to load bracket data.';
+    document.getElementById('bracket').appendChild(err);
+  });
+})();
+</script>
+
+{% endblock %}

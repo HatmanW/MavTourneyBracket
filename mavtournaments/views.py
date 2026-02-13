@@ -1,0 +1,225 @@
+# mavtournaments/views.py
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required, permission_required
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from .services.bracket_builder import generate_single_elim
+from .models import Tournament, Team  # include Round/Match if you have them
+from .forms import TournamentForm, TeamForm    # keep your custom forms if any
+
+
+def _ctx_tournament(t, **extra):
+    """Standard context helper: always supply both 'tournament' and 't'."""
+    base = {"tournament": t, "t": t}
+    base.update(extra)
+    return base
+
+
+# --------------------------
+# Tournaments
+# --------------------------
+@login_required
+def index(request):
+    qs = Tournament.objects.order_by("-id")
+    return render(request, "mavtournaments/index.html", {"tournaments": qs})
+
+@login_required
+@permission_required("mavtournaments.add_tournament", raise_exception=True)
+def create_tournament(request):
+    if request.method == "POST":
+        form = TournamentForm(request.POST)
+        if form.is_valid():
+            t = form.save()
+            messages.success(request, f'Created tournament "{t.name}".')
+            return redirect("tournaments:bracket", pk=t.pk)
+    else:
+        form = TournamentForm()
+    return render(request, "mavtournaments/create.html", {"form": form})
+
+@login_required
+@permission_required("mavtournaments.delete_tournament", raise_exception=True)
+def delete_tournament(request, pk):
+    t = get_object_or_404(Tournament, pk=pk)
+    if request.method == "POST":
+        name = t.name
+        t.delete()
+        messages.success(request, f'Deleted tournament "{name}".')
+        return redirect("tournaments:index")
+    return render(request, "mavtournaments/confirm_delete.html", {"t": t})
+
+
+# --------------------------
+# Bracket
+# --------------------------
+@login_required
+def bracket(request, pk):
+    t = get_object_or_404(Tournament, pk=pk)
+
+    if t.rounds.count() == 0 and t.teams.count() >= 2:
+        generate_single_elim(t)
+
+    rounds = t.rounds.prefetch_related("matches").all()
+
+    round_count = rounds.count()
+    max_matches = max((r.matches.count() for r in rounds), default=1)
+    svg_w = max(400, round_count * 350 + 350)
+    svg_h = max(300, max_matches * 120 + 120)
+
+    return render(request, "mavtournaments/bracket.html", {
+        "t": t,
+        "rounds": rounds,
+        "svg_w": svg_w,
+        "svg_h": svg_h,
+    })
+
+@login_required
+def bracket_data(request, pk):
+    """Very simple JSON shape so bracket_view.html can render without errors."""
+    t = get_object_or_404(Tournament, pk=pk)
+    data = {
+        "tournament": {"id": t.pk, "name": t.name},
+        "rounds": [],   # fill with your real data structure later
+        "teams": [],    # idem
+    }
+    return JsonResponse(data)
+
+
+# --------------------------
+# Teams
+# --------------------------
+@login_required
+def teams(request, pk):
+    t = get_object_or_404(Tournament, pk=pk)
+    teams_qs = Team.objects.filter(tournament=t).order_by("name")
+    return render(request, "mavtournaments/teams.html", _ctx_tournament(t, teams=teams_qs))
+
+@login_required
+def team_detail(request, pk, team_id):
+    t = get_object_or_404(Tournament, pk=pk)
+    team = get_object_or_404(Team, pk=team_id, tournament=t)
+    return render(request, "mavtournaments/team_detail.html", _ctx_tournament(t, team=team))
+
+@login_required
+def team_join(request, pk, team_id):
+    # TODO: add actual membership logic
+    t = get_object_or_404(Tournament, pk=pk)
+    messages.success(request, "Joined team (placeholder).")
+    return redirect("tournaments:team_detail", pk=t.pk, team_id=team_id)
+
+@login_required
+def team_leave(request, pk, team_id):
+    # TODO: add actual membership logic
+    t = get_object_or_404(Tournament, pk=pk)
+    messages.info(request, "Left team (placeholder).")
+    return redirect("tournaments:team_detail", pk=t.pk, team_id=team_id)
+
+@login_required
+@permission_required(
+    # allow either the built-in model perm OR your custom manage_teams
+    perm=("mavtournaments.add_team",), raise_exception=True
+)
+def add_team(request, pk):
+    # also allow your custom manage_teams if present
+    if (not request.user.has_perm("mavtournaments.add_team")
+        and not request.user.has_perm("mavtournaments.manage_teams")):
+        return redirect("tournaments:teams", pk=pk)
+
+    t = get_object_or_404(Tournament, pk=pk)
+
+    if request.method != "POST":
+        messages.error(request, "Invalid request method.")
+        return redirect("tournaments:teams", pk=t.pk)
+
+    form = TeamForm(request.POST)
+    if form.is_valid():
+        team = form.save(commit=False)
+        team.tournament = t
+        team.save()
+        messages.success(request, f'Team "{team.name}" added.')
+    else:
+        # keep the form errors across the redirect (simple way: flash them)
+        messages.error(request, "Please provide a valid team name.")
+
+    return redirect("tournaments:teams", pk=t.pk)
+
+# --------------------------
+# Seeding
+# --------------------------
+@login_required
+@permission_required("mavtournaments.manage_seeding", raise_exception=True)
+def seed_random(request, pk):
+    t = get_object_or_404(Tournament, pk=pk)
+    # TODO: call your random seeding service
+    messages.info(request, "Random seeding executed (placeholder).")
+    return redirect("tournaments:bracket", pk=t.pk)
+
+@login_required
+@permission_required("mavtournaments.manage_seeding", raise_exception=True)
+def seed_power(request, pk):
+    t = get_object_or_404(Tournament, pk=pk)
+    # TODO: call your power seeding service
+    messages.info(request, "Power seeding executed (placeholder).")
+    return redirect("tournaments:bracket", pk=t.pk)
+
+
+# --------------------------
+# Matches / flow
+# --------------------------
+@login_required
+@permission_required("mavtournaments.advance_match", raise_exception=True)
+def advance_match(request, pk, match_id):
+    # TODO: implement advance logic
+    messages.success(request, f"Advanced match {match_id} (placeholder).")
+    return redirect("tournaments:bracket", pk=pk)
+
+@login_required
+@permission_required("mavtournaments.advance_match", raise_exception=True)
+def set_winner(request, pk, match_id, team_id):
+    """Alias used by existing templates; routes to advance logic."""
+    # TODO: implement: set winner=team_id for match_id and propagate
+    messages.success(request, f"Set winner for match {match_id} (team {team_id}) (placeholder).")
+    return redirect("tournaments:bracket", pk=pk)
+
+@login_required
+@permission_required("mavtournaments.manage_teams", raise_exception=True)
+def move_team(request, pk):
+    t = get_object_or_404(Tournament, pk=pk)
+    messages.info(request, "Moved team (placeholder).")
+    return redirect("tournaments:teams", pk=t.pk)
+
+
+# --------------------------
+# Team Builder / CSV
+# --------------------------
+@login_required
+@permission_required("mavtournaments.manage_teams", raise_exception=True)
+def team_builder(request, pk):
+    t = get_object_or_404(Tournament, pk=pk)
+    return render(request, "mavtournaments/team_builder.html", _ctx_tournament(t))
+
+@login_required
+@permission_required("mavtournaments.manage_teams", raise_exception=True)
+def bulk_teams(request, pk):
+    t = get_object_or_404(Tournament, pk=pk)
+    return render(request, "mavtournaments/bulk_teams.html", _ctx_tournament(t))
+
+@login_required
+@permission_required("mavtournaments.manage_teams", raise_exception=True)
+def bulk_teams_preview(request, pk):
+    t = get_object_or_404(Tournament, pk=pk)
+    messages.error(request, "Nothing to preview yet (placeholder).")
+    return redirect("tournaments:bulk_teams", pk=t.pk)
+
+@login_required
+@permission_required("mavtournaments.manage_teams", raise_exception=True)
+def bulk_teams_confirm(request, pk):
+    t = get_object_or_404(Tournament, pk=pk)
+    messages.success(request, "No teams created (placeholder).")
+    return redirect("tournaments:teams", pk=t.pk)
+
+@login_required
+def csv_template(request, pk):
+    sample = "Team Alpha, alice, bob\nTeam Beta, carol, dave\n"
+    resp = HttpResponse(sample, content_type="text/csv; charset=utf-8")
+    resp["Content-Disposition"] = f'attachment; filename=\"mavbracket_csv_template_{pk}.csv\"'
+    return resp

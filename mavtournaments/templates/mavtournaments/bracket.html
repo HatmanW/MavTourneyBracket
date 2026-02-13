@@ -1,0 +1,57 @@
+<!--mavtournaments/templates/mavtournaments/bracket.html -->
+{% extends "base.html" %}
+{% load static %}
+{% block extra_head %}
+<style>
+  #stage { width:100%; height: calc(100dvh - 140px); touch-action: none; border:1px solid #ddd; background:#fff; }
+  .toolbar { position:sticky; bottom:0; display:flex; gap:.5rem; padding:.5rem; background:#f8f9fa; }
+  .name { font-size:12px; }
+  .match { cursor:pointer; }
+</style>
+<script src="{% static 'mavtournaments/bracket.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+<h1>{{ t.name }} — Bracket</h1>
+
+<div id="stage">
+  <svg id="svg" viewBox="0 0 {{ svg_w }} {{ svg_h }}" xmlns="http://www.w3.org/2000/svg">
+    {% for r in rounds %}
+      {# x = (round_index + 1) * 350 #}
+      {% widthratio forloop.counter 1 350 as x %}
+      {% for m in r.matches.all %}
+        {# y = (match_index + 1) * 120 + 40  #}
+        {% widthratio forloop.counter 1 120 as y_base %}
+        {% with y=y_base|add:40 %}
+        <g class="match" data-match="{{ m.id }}">
+          <rect x="{{ x }}" y="{{ y }}" width="280" height="60" rx="10" fill="#f2f2f2" stroke="#bbb"/>
+          <text x="{{ x|add:10 }}" y="{{ y|add:22 }}" class="name">{{ m.team1.name|default:"—" }}</text>
+          <text x="{{ x|add:10 }}" y="{{ y|add:44 }}" class="name">{{ m.team2.name|default:"—" }}</text>
+
+          {% comment %}
+          {% if m.team1 %}
+            <a href="{% url 'tournaments:set_winner' m.id m.team1.id %}">
+              <text x="{{ x|add:250 }}" y="{{ y|add:22 }}" class="name">win</text>
+            </a>
+          {% endif %}
+          {% if m.team2 %}
+            <a href="{% url 'tournaments:set_winner' m.id m.team2.id %}">
+              <text x="{{ x|add:250 }}" y="{{ y|add:44 }}" class="name">win</text>
+            </a>
+          {% endif %}
+          {% endcomment %}
+
+          <title>{{ m.label }} – tap team to set winner</title>
+        </g>
+        {% endwith %}
+      {% endfor %}
+    {% endfor %}
+  </svg>
+</div>
+
+<div class="toolbar">
+  <button class="btn btn-outline-secondary" onclick="zoomOut()">−</button>
+  <button class="btn btn-outline-secondary" onclick="zoomIn()">+</button>
+  <button class="btn btn-outline-secondary" onclick="resetView()">Fit</button>
+</div>
+{% endblock %}

@@ -1,0 +1,142 @@
+<!-- mavtournaments/templates/mavtournaments/teams.html -->
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Teams · {{ tournament.name }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'tournaments:index' %}">Tournaments</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'tournaments:bracket' tournament.pk %}">{{ tournament.name }}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Teams</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <h1 class="h4 mb-0">{{ tournament.name }} — Teams</h1>
+  <div class="btn-group">
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'tournaments:bracket' tournament.pk %}">View Bracket</a>
+  </div>
+</div>
+<hr>
+
+<div class="row g-4">
+  <!-- Left: Add team / Seeding / CSV -->
+  <div class="col-lg-5">
+    <!-- Add Team -->
+    <div class="card mb-3">
+      <div class="card-header">Add team</div>
+      <div class="card-body">
+        {% if perms.mavtournaments.add_team or perms.mavtournaments.manage_teams %}
+          <form method="post" action="{% url 'tournaments:add_team' tournament.pk %}">
+            {% csrf_token %}
+
+            {# Prefer a real TeamForm if provided; otherwise fall back to a single input #}
+            {% if form %}
+              {{ form.non_field_errors }}
+              <div class="mb-3">
+                {# Try to render the name field nicely #}
+                {% if form.name %}
+                  <label class="form-label" for="{{ form.name.id_for_label }}">Team name</label>
+                  {{ form.name }}
+                  {% if form.name.errors %}
+                    <div class="text-danger small mt-1">{{ form.name.errors|striptags }}</div>
+                  {% endif %}
+                {% else %}
+                  {{ form.as_p }}
+                {% endif %}
+              </div>
+            {% else %}
+              <div class="mb-3">
+                <label class="form-label" for="id_name">Team name</label>
+                <input id="id_name" name="name" type="text" class="form-control" placeholder="e.g., Team Alpha" required>
+              </div>
+            {% endif %}
+
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-success">Add team</button>
+              <a href="{% url 'tournaments:teams' tournament.pk %}" class="btn btn-outline-secondary">Reset</a>
+            </div>
+          </form>
+        {% else %}
+          <div class="alert alert-warning mb-0">
+            You don’t have permission to add teams.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Seeding -->
+    <div class="card mb-3">
+      <div class="card-header">Generate bracket</div>
+      <div class="card-body">
+        {% if perms.mavtournaments.manage_seeding %}
+          <div class="d-flex gap-2">
+            <a class="btn btn-primary btn-sm"
+               href="{% url 'tournaments:seed_power' tournament.pk %}">Power seeding</a>
+            <a class="btn btn-secondary btn-sm"
+               href="{% url 'tournaments:seed_random' tournament.pk %}">Random seeding</a>
+          </div>
+          <p class="text-muted small mt-2 mb-0">
+            Power = seed by ranking; Random = shuffle all teams.
+          </p>
+        {% else %}
+          <div class="alert alert-info mb-0">
+            You need <code>manage_seeding</code> permission to seed brackets.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- CSV Bulk -->
+    <div class="card mb-3">
+      <div class="card-header">Bulk import</div>
+      <div class="card-body">
+        {% if perms.mavtournaments.manage_teams %}
+          <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-outline-primary btn-sm" href="{% url 'tournaments:bulk_teams' tournament.pk %}">
+              Upload CSV
+            </a>
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'tournaments:csv_template' tournament.pk %}">
+              Download CSV template
+            </a>
+          </div>
+          <p class="text-muted small mt-2 mb-0">
+            CSV format: <code>Team Name, player1, player2, ...</code>
+          </p>
+        {% else %}
+          <div class="alert alert-info mb-0">
+            You need <code>manage_teams</code> to use bulk import.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Teams list -->
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header">Current teams ({{ teams|length }})</div>
+      <ul class="list-group list-group-flush">
+        {% for team in teams %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div class="me-3">
+              <strong>{{ team.name }}</strong>
+            </div>
+            <div class="btn-group btn-group-sm">
+              {% url 'tournaments:team_detail' tournament.pk team.id as team_detail_url %}
+              {% if team_detail_url %}
+                <a class="btn btn-outline-secondary" href="{{ team_detail_url }}">View</a>
+              {% endif %}
+              {# You can add Edit/Delete here later #}
+            </div>
+          </li>
+        {% empty %}
+          <li class="list-group-item text-muted">No teams yet.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

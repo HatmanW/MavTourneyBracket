@@ -1,6 +1,50 @@
+
 {% extends "base.html" %}
 {% block title %}About{% endblock %}
+
 {% block content %}
-<h1>About This Template</h1>
-<p>By HatmanWGrey</p>
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+    <li class="breadcrumb-item active" aria-current="page">About</li>
+  </ol>
+</nav>
+
+<div class="py-4">
+  <h1 class="mb-3">About This Project</h1>
+  <p class="lead">A fast-start Django base with a tournament module called <strong>MavBracket</strong>.</p>
+
+  <div class="row g-3">
+    <div class="col-md-6">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5 class="card-title">Features</h5>
+          <ul class="mb-0">
+            <li>Single-elimination brackets up to 256 teams</li>
+            <li>Zoomable, touch-friendly SVG bracket</li>
+            <li>Team management (2 players/team) with user linking</li>
+            <li>Admin seeding, advancing, and team swapping</li>
+            <li>Role-aware UI (public view vs. admin controls)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5 class="card-title">Get Started</h5>
+          {% if user.is_authenticated %}
+            <p>Head to the brackets or update your profile.</p>
+            <a class="btn btn-secondary me-2" href="{% url 'tournaments:index' %}">Open Brackets</a>
+            <a class="btn btn-outline-primary" href="{% url 'profile' %}">Your Profile</a>
+          {% else %}
+            <p>Create an account to join teams and appear on brackets.</p>
+            <a class="btn btn-success me-2" href="{% url 'register' %}">Register</a>
+            <a class="btn btn-outline-primary" href="{% url 'login' %}">Login</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}

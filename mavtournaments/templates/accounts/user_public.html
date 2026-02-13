@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ u.get_full_name|default:u.username }}</h1>
+<p>Username: {{ u.username }}</p>
+{% endblock %}

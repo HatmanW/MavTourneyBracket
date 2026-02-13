@@ -1,0 +1,16 @@
+<!-- mavtournaments/templates/mavtournaments/create.html -->
+{% extends "base.html" %}
+{% block title %}Create Tournament{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb"><ol class="breadcrumb">
+  <li class="breadcrumb-item"><a href="{% url 'tournaments:index' %}">Tournaments</a></li>
+  <li class="breadcrumb-item active" aria-current="page">Create</li>
+</ol></nav>
+
+<h1>Create Tournament</h1>
+<form method="post">{% csrf_token %}
+  {{ form.as_p }}
+  <button class="btn btn-primary">Create</button>
+  <a class="btn btn-outline-secondary" href="{% url 'tournaments:index' %}">Cancel</a>
+</form>
+{% endblock %}

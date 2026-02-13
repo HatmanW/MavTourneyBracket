@@ -1,0 +1,43 @@
+<!-- mavtournaments/templates/mavtournaments/index.html -->
+{% extends "base.html" %}
+{% block title %}Tournaments{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb"><ol class="breadcrumb">
+  <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+  <li class="breadcrumb-item active" aria-current="page">Tournaments</li>
+</ol></nav>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="mb-0">Tournaments</h1>
+  {% if perms.mavtournaments.add_tournament %}
+    <a class="btn btn-primary" href="{% url 'tournaments:create' %}">Create tournament</a>
+  {% endif %}
+</div>
+
+<div class="row g-3">
+  {% for t in tournaments %}
+    <div class="col-md-6">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5 class="card-title">{{ t.name }}</h5>
+          <p class="card-text mb-2">Status: {{ t.status }}</p>
+          <a class="btn btn-secondary btn-sm me-2" href="{% url 'tournaments:bracket' t.id %}">View bracket</a>
+          <a class="btn btn-outline-secondary btn-sm me-2" href="{% url 'tournaments:bracket' t.id %}">SVG view</a>
+          <a class="btn btn-outline-secondary btn-sm" href="{% url 'tournaments:teams' t.id %}">Teams</a>
+        </div>
+        {% if perms.mavtournaments.delete_tournament %}
+        <div class="card-footer">
+          <form method="post" action="{% url 'tournaments:delete' t.id %}">{% csrf_token %}
+            <button class="btn btn-outline-danger btn-sm">Delete</button>
+          </form>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  {% empty %}
+    <div class="col-12">
+      <div class="alert alert-info">No tournaments yet.</div>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

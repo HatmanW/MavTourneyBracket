@@ -1,0 +1,56 @@
+<!-- mavtournaments/templates/mavtournaments/team_builder.html -->
+{% extends "base.html" %}
+{% block title %}Team Builder — {{ t.name }}{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'tournaments:index' %}">Tournaments</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'tournaments:teams' t.id %}">{{ t.name }} — Teams</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Team Builder</li>
+  </ol>
+</nav>
+
+<h1 class="h4 mb-3">Create team in {{ t.name }}</h1>
+<p class="text-muted">Default team size for this tournament: <strong>{{ t.default_team_size }}</strong></p>
+
+<form method="post" class="row g-3">
+  {% csrf_token %}
+  <div class="col-12 col-md-6">
+    <label class="form-label">Team name</label>
+    {{ form.name }}
+  </div>
+  <div class="col-6 col-md-3">
+    <label class="form-label">Max players</label>
+    {{ form.max_players }}
+  </div>
+
+  <div class="col-12">
+    <label class="form-label">Members</label>
+    <input type="text" class="form-control mb-2" placeholder="Type to filter usernames…" id="user-filter">
+    {{ form.members }}
+    <div class="form-text">Hold Ctrl/⌘ to select multiple users.</div>
+  </div>
+
+  <div class="col-12">
+    <button class="btn btn-primary">Create Team</button>
+    <a href="{% url 'tournaments:teams' t.id %}" class="btn btn-outline-secondary">Cancel</a>
+  </div>
+</form>
+
+<script>
+  (function () {
+    const input = document.getElementById('user-filter');
+    const select = document.getElementById('{{ form.members.id_for_label }}');
+    if (!input || !select) return;
+    const opts = Array.from(select.options);
+    input.addEventListener('input', function () {
+      const q = this.value.toLowerCase();
+      select.innerHTML = '';
+      opts.forEach(o => {
+        const text = o.text.toLowerCase();
+        if (!q || text.includes(q)) select.appendChild(o);
+      });
+    });
+  })();
+</script>
+{% endblock %}

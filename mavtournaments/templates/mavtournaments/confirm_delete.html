@@ -1,0 +1,17 @@
+<!-- mavtournaments/templates/mavtournaments/confirm_delete.html -->
+{% extends "base.html" %}
+{% block title %}Delete Tournament{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb"><ol class="breadcrumb">
+  <li class="breadcrumb-item"><a href="{% url 'tournaments:index' %}">Tournaments</a></li>
+  <li class="breadcrumb-item active" aria-current="page">Delete</li>
+</ol></nav>
+
+<div class="alert alert-warning">
+  Are you sure you want to delete <strong>{{ t.name }}</strong>? This cannot be undone.
+</div>
+<form method="post">{% csrf_token %}
+  <button class="btn btn-danger">Yes, delete</button>
+  <a class="btn btn-outline-secondary" href="{% url 'tournaments:index' %}">Cancel</a>
+</form>
+{% endblock %}

@@ -1,0 +1,44 @@
+<!-- mavtournaments/templates/mavtournaments/bulk_teams_preview.html -->
+{% extends "base.html" %}
+{% block title %}CSV Preview — {{ t.name }}{% endblock %}
+{% block content %}
+<nav class="mb-3" aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'tournaments:index' %}">Tournaments</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'tournaments:teams' t.id %}">{{ t.name }} — Teams</a></li>
+    <li class="breadcrumb-item active">Preview</li>
+  </ol>
+</nav>
+
+<h1 class="h4 mb-3">Preview import</h1>
+
+<table class="table table-sm">
+  <thead><tr><th>Team</th><th>Users found</th><th>Missing</th></tr></thead>
+  <tbody>
+    {% for row in preview %}
+      <tr>
+        <td>{{ row.team }}</td>
+        <td>{{ row.exists|default:"—"|join:", " }}</td>
+        <td>
+          {% if row.missing %}
+            <span class="text-danger">{{ row.missing|join:", " }}</span>
+          {% else %}
+            <span class="text-muted">—</span>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<form method="post" action="{% url 'tournaments:bulk_teams_confirm' t.id %}">
+  {% csrf_token %}
+  <button class="btn btn-success">Confirm Import</button>
+  <a href="{% url 'tournaments:bulk_teams' t.id %}" class="btn btn-outline-secondary">Go Back</a>
+</form>
+
+<p class="text-muted small mt-3">
+  Max players per team (default): <strong>{{ default_max_players }}</strong><br>
+  Create missing users automatically: <strong>{{ create_missing_users|yesno:"Yes,No" }}</strong>
+</p>
+{% endblock %}

@@ -1,0 +1,42 @@
+<!--TourneyBracket/mavtournaments/templates/mavtournaments/team_detail.html -->
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ team.name }}</h1>
+<p><strong>Tournament:</strong> <a href="{% url 'tournaments:bracket' team.tournament_id %}">{{ team.tournament.name }}</a></p>
+
+<h4>Players</h4>
+<ul>
+  {% if members %}
+    {% for u in members %}
+      <li>
+        {% if u.get_full_name %}{{ u.get_full_name }}{% else %}{{ u.username }}{% endif %}
+        {% if request.user.is_authenticated and request.user == u %}
+          <form method="post" action="{% url 'tournaments:team_leave' team.id %}" class="d-inline">{% csrf_token %}
+            <button class="btn btn-sm btn-outline-danger">Leave team</button>
+          </form>
+        {% endif %}
+      </li>
+    {% endfor %}
+  {% else %}
+    <li>{{ team.participants_display }}</li>
+  {% endif %}
+</ul>
+
+{% if request.user.is_authenticated and not members or members|length < 2 %}
+<form method="post" action="{% url 'tournaments:team_join' team.id %}" class="mt-2">{% csrf_token %}
+  <button class="btn btn-sm btn-primary">Join this team</button>
+</form>
+{% endif %}
+
+<hr>
+<h4>Matches</h4>
+<ul>
+  {% for m in matches %}
+    <li>Round {{ m.round.index|add:1 }} — {{ m.team1.name|default:"—" }} vs {{ m.team2.name|default:"—" }}
+        {% if m.winner %} | Winner: <strong>{{ m.winner.name }}</strong>{% endif %}
+    </li>
+  {% empty %}
+    <li>No matches yet.</li>
+  {% endfor %}
+</ul>
+{% endblock %}
