@@ -22,7 +22,6 @@
           <h5 class="card-title">{{ t.name }}</h5>
           <p class="card-text mb-2">Status: {{ t.status }}</p>
           <a class="btn btn-secondary btn-sm me-2" href="{% url 'tournaments:bracket' t.id %}">View bracket</a>
-          <a class="btn btn-outline-secondary btn-sm me-2" href="{% url 'tournaments:bracket' t.id %}">SVG view</a>
           <a class="btn btn-outline-secondary btn-sm" href="{% url 'tournaments:teams' t.id %}">Teams</a>
         </div>
         {% if perms.mavtournaments.delete_tournament %}
