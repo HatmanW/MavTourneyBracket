@@ -4,9 +4,8 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from .services.bracket_builder import generate_single_elim, set_winner as advance_winner
-from .models import Tournament, Team, Match
-from .forms import TournamentForm, TeamForm    # keep your custom forms if any
-
+from .services.bracket_builder import generate_single_elim, set_winner as advance_winner
+from .models import Tournament, Team, Match, TeamMembership
 
 def _ctx_tournament(t, **extra):
     """Standard context helper: always supply both 'tournament' and 't'."""
@@ -136,20 +135,47 @@ def teams(request, pk):
 def team_detail(request, pk, team_id):
     t = get_object_or_404(Tournament, pk=pk)
     team = get_object_or_404(Team, pk=team_id, tournament=t)
-    return render(request, "mavtournaments/team_detail.html", _ctx_tournament(t, team=team))
+    members = team.players.all()
+    return render(request, "mavtournaments/team_detail.html", _ctx_tournament(t, team=team, members=members))
 
 @login_required
 def team_join(request, pk, team_id):
-    # TODO: add actual membership logic
     t = get_object_or_404(Tournament, pk=pk)
-    messages.success(request, "Joined team (placeholder).")
+    team = get_object_or_404(Team, pk=team_id, tournament=t)
+
+    if request.method != "POST":
+        messages.error(request, "Invalid request method.")
+        return redirect("tournaments:team_detail", pk=t.pk, team_id=team_id)
+    
+    if team.players.filter(pk=request.user.pk).exists():
+        messages.info(request, f"You are already on team {team.name}.")
+        return redirect("tournaments:team_detail", pk=t.pk, team_id=team_id)
+    
+    if not team.has_capacity():
+        messages.error(request, f"Team {team.name} is full.")
+        return redirect("tournaments:team_detail", pk=t.pk, team_id=team_id)
+    
+    TeamMembership.objects.create(team=team, user=request.user, role="player")
+    messages.success(request, f"You joined team {team.name}")
     return redirect("tournaments:team_detail", pk=t.pk, team_id=team_id)
 
 @login_required
 def team_leave(request, pk, team_id):
-    # TODO: add actual membership logic
     t = get_object_or_404(Tournament, pk=pk)
-    messages.info(request, "Left team (placeholder).")
+    team = get_object_or_404(Team, pk=team_id, tournament=t)
+
+    if request.method != "POST":
+        messages.error(request, "Invalid request method.")
+        return redirect("tournaments:team_detail", pk=t.pk, team_id=team_id)
+    
+    membership = TeamMembership.objects.filter(team=team, user=request.user).first()
+
+    if not membership:
+        messages.info(request, f"You are not on team {team.name}.")
+        return redirect("tournaments:team_detail", pk=t.pk, team_id=team_id)
+    
+    membership.delete()
+    messages.success(request, f"Left team {team.name}")
     return redirect("tournaments:team_detail", pk=t.pk, team_id=team_id)
 
 @login_required
