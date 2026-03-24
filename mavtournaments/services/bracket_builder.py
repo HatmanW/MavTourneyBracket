@@ -17,6 +17,8 @@ def generate_single_elim(t: Tournament, seed_method: str = "POWER"):
     teams: List[Team] = list(t.teams.all())
     n = len(teams)
     if n < 2:
+        t.status = "DRAFT"
+        t.save(update_fields=["status"])
         return
 
     M = _next_power_of_two(n)          # bracket size (power of two)
@@ -71,35 +73,50 @@ def generate_single_elim(t: Tournament, seed_method: str = "POWER"):
     t.save(update_fields=["status"])
 
 def set_winner(match: Match, winner: Team, cascade: bool = True):
-    loser = match.team2 if match.team1 == winner else match.team1
+    if winner is None or winner.id not in {match.team1_id, match.team2_id}:
+        raise ValueError("Winner must be one of the teams in this match.")
+
+    loser = match.team2 if match.team1_id == winner.id else match.team1
     match.winner = winner
     match.loser = loser
     match.save(update_fields=["winner", "loser"])
 
-    if winner:
-        winner.wins += 1; winner.save(update_fields=["wins"])
-    if loser:
-        loser.losses += 1; loser.save(update_fields=["losses"])
+    # Don't count BYEs as real wins/losses
+    if not match.is_bye:
+        if winner:
+            winner.wins += 1
+            winner.save(update_fields=["wins"])
+        if loser:
+            loser.losses += 1
+            loser.save(update_fields=["losses"])
 
-    # advance
+    # Advance winner ONLY to the next match slot.
+    # Do NOT auto-win the next round just because the other side isn't filled yet.
     if cascade and match.next_win:
         target = match.next_win
-        if target.team1 is None:
-            target.team1 = winner
-        elif target.team2 is None:
-            target.team2 = winner
-        target.save(update_fields=["team1","team2"])
+        updates = []
 
-        # propagate unexpected byes mid-tree
-        if (target.team1 is None) ^ (target.team2 is None):
-            target.is_bye = True
-            target.save(update_fields=["is_bye"])
-            auto = target.team1 or target.team2
-            if auto:
-                set_winner(target, auto, cascade=True)
+        # Deterministic placement:
+        # even slot feeds team1, odd slot feeds team2
+        if match.slot % 2 == 0:
+            if target.team1_id != winner.id:
+                target.team1 = winner
+                updates.append("team1")
+        else:
+            if target.team2_id != winner.id:
+                target.team2 = winner
+                updates.append("team2")
+
+        # If both sides are now filled, this is not a bye
+        if target.team1_id and target.team2_id and target.is_bye:
+            target.is_bye = False
+            updates.append("is_bye")
+
+        if updates:
+            target.save(update_fields=updates)
 
     # finish flag if this was the final
-    final = Match.objects.filter(tournament=match.tournament).order_by("-round__index","slot").first()
+    final = Match.objects.filter(tournament=match.tournament).order_by("-round__index", "slot").first()
     if final and final.id == match.id and match.winner:
         trn = match.tournament
         trn.status = "FINISHED"

@@ -1,47 +1,140 @@
-<!--mavtournaments/templates/mavtournaments/bracket.html -->
 {% extends "base.html" %}
 {% load static %}
 {% block extra_head %}
 <style>
-  #stage { width:100%; height: calc(100dvh - 140px); touch-action: none; border:1px solid #ddd; background:#fff; }
-  .toolbar { position:sticky; bottom:0; display:flex; gap:.5rem; padding:.5rem; background:#f8f9fa; }
-  .name { font-size:12px; }
-  .match { cursor:pointer; }
+  #stage {
+    width: 100%;
+    height: calc(100dvh - 140px);
+    touch-action: none;
+    border: 1px solid #ddd;
+    background: #fff;
+  }
+
+  .toolbar {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    gap: .5rem;
+    padding: .5rem;
+    background: #f8f9fa;
+    border-top: 1px solid #ddd;
+  }
+
+  .name { font-size: 12px; }
+  .meta { font-size: 11px; fill: #555; }
+  .winner-name { font-weight: 700; fill: #166534; }
+
+  .control-panel {
+    margin-top: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    background: #fff;
+    overflow: hidden;
+  }
+
+  .control-panel-header {
+    padding: .75rem 1rem;
+    font-weight: 700;
+    border-bottom: 1px solid #eee;
+    background: #f8f9fa;
+  }
+
+  .control-panel-body {
+    padding: 1rem;
+  }
+
+  .advance-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: .75rem 0;
+    border-bottom: 1px solid #eee;
+  }
+
+  .advance-row:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  .advance-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+  }
+
+  .match-label {
+    font-weight: 600;
+  }
+
+  .match-subtext {
+    color: #666;
+    font-size: .9rem;
+  }
 </style>
 <script src="{% static 'mavtournaments/bracket.js' %}"></script>
 {% endblock %}
 
 {% block content %}
-<h1>{{ t.name }} — Bracket</h1>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="mb-0">{{ t.name }} — Bracket</h1>
+  {% if perms.mavtournaments.add_team or perms.mavtournaments.manage_teams %}
+    <a class="btn btn-outline-primary btn-sm"
+       href="{% url 'tournaments:teams' t.pk %}">
+      Teams
+    </a>
+  {% endif %}
+</div>
 
 <div id="stage">
   <svg id="svg" viewBox="0 0 {{ svg_w }} {{ svg_h }}" xmlns="http://www.w3.org/2000/svg">
     {% for r in rounds %}
-      {# x = (round_index + 1) * 350 #}
       {% widthratio forloop.counter 1 350 as x %}
       {% for m in r.matches.all %}
-        {# y = (match_index + 1) * 120 + 40  #}
         {% widthratio forloop.counter 1 120 as y_base %}
         {% with y=y_base|add:40 %}
-        <g class="match" data-match="{{ m.id }}">
-          <rect x="{{ x }}" y="{{ y }}" width="280" height="60" rx="10" fill="#f2f2f2" stroke="#bbb"/>
-          <text x="{{ x|add:10 }}" y="{{ y|add:22 }}" class="name">{{ m.team1.name|default:"—" }}</text>
-          <text x="{{ x|add:10 }}" y="{{ y|add:44 }}" class="name">{{ m.team2.name|default:"—" }}</text>
+        <g data-match="{{ m.id }}">
+          <rect
+            x="{{ x }}"
+            y="{{ y }}"
+            width="280"
+            height="72"
+            rx="10"
+            fill="{% if m.winner %}#ecfdf5{% else %}#f2f2f2{% endif %}"
+            stroke="{% if m.winner %}#22c55e{% else %}#bbb{% endif %}"
+          />
 
-          {% comment %}
-          {% if m.team1 %}
-            <a href="{% url 'tournaments:set_winner' m.id m.team1.id %}">
-              <text x="{{ x|add:250 }}" y="{{ y|add:22 }}" class="name">win</text>
-            </a>
-          {% endif %}
-          {% if m.team2 %}
-            <a href="{% url 'tournaments:set_winner' m.id m.team2.id %}">
-              <text x="{{ x|add:250 }}" y="{{ y|add:44 }}" class="name">win</text>
-            </a>
-          {% endif %}
-          {% endcomment %}
+          <text
+            x="{{ x|add:10 }}"
+            y="{{ y|add:22 }}"
+            class="name {% if m.winner_id == m.team1_id %}winner-name{% endif %}"
+          >
+            {{ m.team1.name|default:"—" }}
+          </text>
 
-          <title>{{ m.label }} – tap team to set winner</title>
+          <text
+            x="{{ x|add:10 }}"
+            y="{{ y|add:46 }}"
+            class="name {% if m.winner_id == m.team2_id %}winner-name{% endif %}"
+          >
+            {{ m.team2.name|default:"—" }}
+          </text>
+
+          {% if m.winner %}
+            <text x="{{ x|add:10 }}" y="{{ y|add:63 }}" class="meta">
+              Winner: {{ m.winner.name }}
+            </text>
+          {% elif m.is_bye %}
+            <text x="{{ x|add:10 }}" y="{{ y|add:63 }}" class="meta">
+              Bye
+            </text>
+          {% else %}
+            <text x="{{ x|add:10 }}" y="{{ y|add:63 }}" class="meta">
+              Waiting for teams
+            </text>
+          {% endif %}
+
+          <title>{{ m.label }}</title>
         </g>
         {% endwith %}
       {% endfor %}
@@ -54,4 +147,45 @@
   <button class="btn btn-outline-secondary" onclick="zoomIn()">+</button>
   <button class="btn btn-outline-secondary" onclick="resetView()">Fit</button>
 </div>
+
+{% if can_advance %}
+  <div class="control-panel">
+    <div class="control-panel-header">
+      Match Control Panel
+    </div>
+
+    <div class="control-panel-body">
+      {% if pending_matches %}
+        {% for m in pending_matches %}
+          <div class="advance-row">
+            <div>
+              <div class="match-label">{{ m.label }} — Round {{ m.round.index|add:1 }}</div>
+              <div class="match-subtext">{{ m.team1.name }} vs {{ m.team2.name }}</div>
+            </div>
+
+            <div class="advance-actions">
+              <form method="post" action="{% url 'tournaments:advance_match' t.pk m.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="winner_id" value="{{ m.team1.id }}">
+                <button type="submit" class="btn btn-sm btn-outline-primary">
+                  Advance {{ m.team1.name }}
+                </button>
+              </form>
+
+              <form method="post" action="{% url 'tournaments:advance_match' t.pk m.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="winner_id" value="{{ m.team2.id }}">
+                <button type="submit" class="btn btn-sm btn-outline-primary">
+                  Advance {{ m.team2.name }}
+                </button>
+              </form>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="text-muted">No matches are currently ready to advance.</div>
+      {% endif %}
+    </div>
+  </div>
+{% endif %}
 {% endblock %}
