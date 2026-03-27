@@ -6,6 +6,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from .services.bracket_builder import generate_single_elim, set_winner as advance_winner
 from .services.bracket_builder import generate_single_elim, set_winner as advance_winner
 from .models import Tournament, Team, Match, TeamMembership
+from.forms import TournamentForm, TeamForm
 
 def _ctx_tournament(t, **extra):
     """Standard context helper: always supply both 'tournament' and 't'."""
