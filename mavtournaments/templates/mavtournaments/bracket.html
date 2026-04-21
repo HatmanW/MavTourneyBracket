@@ -1,28 +1,17 @@
 {% extends "base.html" %}
-{% load static %}
+
 {% block extra_head %}
+<link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/brackets-viewer@1.9.0/dist/brackets-viewer.min.css" />
 <style>
-  #stage {
-    width: 100%;
-    height: calc(100dvh - 140px);
-    touch-action: none;
-    border: 1px solid #ddd;
-    background: #fff;
+  #bracket-wrap {
+    overflow-x: auto;
+    padding-bottom: 1rem;
   }
 
-  .toolbar {
-    position: sticky;
-    bottom: 0;
-    display: flex;
-    gap: .5rem;
-    padding: .5rem;
-    background: #f8f9fa;
-    border-top: 1px solid #ddd;
+  #bracket-viewer {
+    min-height: 420px;
   }
-
-  .name { font-size: 12px; }
-  .meta { font-size: 11px; fill: #555; }
-  .winner-name { font-weight: 700; fill: #166534; }
 
   .control-panel {
     margin-top: 1rem;
@@ -71,13 +60,18 @@
     color: #666;
     font-size: .9rem;
   }
+
+  .match-highlight {
+    outline: 2px solid #0d6efd;
+    outline-offset: 6px;
+    border-radius: 10px;
+    transition: outline 0.2s ease;
+  }
 </style>
-<script src="{% static 'mavtournaments/bracket.js' %}"></script>
 {% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <h1 class="mb-0">{{ t.name }} — Bracket</h1>
   {% if perms.mavtournaments.add_team or perms.mavtournaments.manage_teams %}
     <a class="btn btn-outline-primary btn-sm"
        href="{% url 'tournaments:teams' t.pk %}">
@@ -86,66 +80,8 @@
   {% endif %}
 </div>
 
-<div id="stage">
-  <svg id="svg" viewBox="0 0 {{ svg_w }} {{ svg_h }}" xmlns="http://www.w3.org/2000/svg">
-    {% for r in rounds %}
-      {% widthratio forloop.counter 1 350 as x %}
-      {% for m in r.matches.all %}
-        {% widthratio forloop.counter 1 120 as y_base %}
-        {% with y=y_base|add:40 %}
-        <g data-match="{{ m.id }}">
-          <rect
-            x="{{ x }}"
-            y="{{ y }}"
-            width="280"
-            height="72"
-            rx="10"
-            fill="{% if m.winner %}#ecfdf5{% else %}#f2f2f2{% endif %}"
-            stroke="{% if m.winner %}#22c55e{% else %}#bbb{% endif %}"
-          />
-
-          <text
-            x="{{ x|add:10 }}"
-            y="{{ y|add:22 }}"
-            class="name {% if m.winner_id == m.team1_id %}winner-name{% endif %}"
-          >
-            {{ m.team1.name|default:"—" }}
-          </text>
-
-          <text
-            x="{{ x|add:10 }}"
-            y="{{ y|add:46 }}"
-            class="name {% if m.winner_id == m.team2_id %}winner-name{% endif %}"
-          >
-            {{ m.team2.name|default:"—" }}
-          </text>
-
-          {% if m.winner %}
-            <text x="{{ x|add:10 }}" y="{{ y|add:63 }}" class="meta">
-              Winner: {{ m.winner.name }}
-            </text>
-          {% elif m.is_bye %}
-            <text x="{{ x|add:10 }}" y="{{ y|add:63 }}" class="meta">
-              Bye
-            </text>
-          {% else %}
-            <text x="{{ x|add:10 }}" y="{{ y|add:63 }}" class="meta">
-              Waiting for teams
-            </text>
-          {% endif %}
-
-          <title>{{ m.label }}</title>
-        </g>
-        {% endwith %}
-      {% endfor %}
-    {% endfor %}
-  </svg>
-</div>
-
-<div class="toolbar">
-  <button class="btn btn-outline-secondary" onclick="zoomOut()">−</button>
-  <button class="btn btn-outline-secondary" onclick="zoomIn()">+</button>
-  <button class="btn btn-outline-secondary" onclick="resetView()">Fit</button>
+<div id="bracket-wrap">
+  <div id="bracket-viewer" class="brackets-viewer"></div>
 </div>
 
 {% if can_advance %}
@@ -157,7 +93,7 @@
     <div class="control-panel-body">
       {% if pending_matches %}
         {% for m in pending_matches %}
-          <div class="advance-row">
+          <div class="advance-row" id="match-{{ m.id }}">
             <div>
               <div class="match-label">{{ m.label }} — Round {{ m.round.index|add:1 }}</div>
               <div class="match-subtext">{{ m.team1.name }} vs {{ m.team2.name }}</div>
@@ -188,4 +124,41 @@
     </div>
   </div>
 {% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/brackets-viewer@1.9.0/dist/brackets-viewer.min.js"></script>
+<script>
+(async function () {
+  const dataUrl = "{% url 'tournaments:bracket_data' t.id %}";
+  const viewerSelector = "#bracket-viewer";
+
+  try {
+    const res = await fetch(dataUrl);
+    if (!res.ok) throw new Error("Failed response");
+
+    const data = await res.json();
+
+    window.bracketsViewer.render(data, {
+      selector: viewerSelector,
+      clear: true,
+      participantOriginPlacement: "none",
+      separatedChildCountLabel: true,
+      showSlotsOrigin: false,
+      showLowerBracketSlotsOrigin: false,
+      highlightParticipantOnHover: true,
+      onMatchClick: function (match) {
+        const row = document.getElementById(`match-${match.id}`);
+        if (!row) return;
+
+        row.scrollIntoView({ behavior: "smooth", block: "center" });
+        row.classList.add("match-highlight");
+        setTimeout(() => row.classList.remove("match-highlight"), 1600);
+      }
+    });
+  } catch (err) {
+    const el = document.getElementById("bracket-viewer");
+    el.innerHTML = '<div class="alert alert-danger">Failed to load bracket.</div>';
+    console.error(err);
+  }
+})();
+</script>
 {% endblock %}

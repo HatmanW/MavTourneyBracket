@@ -111,15 +111,70 @@ def bracket(request, pk):
         "can_advance": request.user.has_perm("mavtournaments.advance_match"),
     })
 
+def _viewer_opponent(team_id, winner_id):
+    payload = {"id": team_id}
+
+    if team_id is not None and winner_id is not None:
+        won = team_id == winner_id
+        payload["score"] = 1 if won else 0
+        payload["result"] = "win" if won else "loss"
+
+    return payload
+
+
 @login_required
 def bracket_data(request, pk):
-    """Very simple JSON shape so bracket_view.html can render without errors."""
     t = get_object_or_404(Tournament, pk=pk)
+
+    matches_qs = (
+        t.matches.select_related("round", "team1", "team2", "winner")
+        .order_by("round__index", "slot")
+    )
+
+    participants = [
+        {
+            "id": team.id,
+            "name": team.name,
+        }
+        for team in t.teams.order_by("name")
+    ]
+
+    team_count = max(2, t.teams.count())
+    bracket_size = 1 << (team_count - 1).bit_length()
+
+    stages = [
+        {
+            "id": t.id,
+            "name": t.name,
+            "number": 1,
+            "type": "single_elimination",
+            "settings": {
+                "size": bracket_size,
+            },
+        }
+    ]
+
+    matches = []
+    for m in matches_qs:
+        matches.append({
+            "id": m.id,
+            "number": m.slot + 1,
+            "stage_id": t.id,
+            "group_id": 0,
+            "round_id": m.round.index,   # 0-based is fine here
+            "child_count": 0,            # single match, not Bo3/Bo5
+            "status": 4 if m.winner_id else 1,
+            "opponent1": _viewer_opponent(m.team1_id, m.winner_id),
+            "opponent2": _viewer_opponent(m.team2_id, m.winner_id),
+        })
+
     data = {
-        "tournament": {"id": t.pk, "name": t.name},
-        "rounds": [],   # fill with your real data structure later
-        "teams": [],    # idem
+        "stages": stages,
+        "matches": matches,
+        "matchGames": [],
+        "participants": participants,
     }
+
     return JsonResponse(data)
 
 
