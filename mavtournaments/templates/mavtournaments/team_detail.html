@@ -11,7 +11,7 @@
       <li>
         {% if u.get_full_name %}{{ u.get_full_name }}{% else %}{{ u.username }}{% endif %}
         {% if request.user.is_authenticated and request.user == u %}
-          <form method="post" action="{% url 'tournaments:team_leave' team.id %}" class="d-inline">{% csrf_token %}
+          <form method="post" action="{% url 'tournaments:team_leave' team.tournament_id team.id %}" class="d-inline">{% csrf_token %}
             <button class="btn btn-sm btn-outline-danger">Leave team</button>
           </form>
         {% endif %}
@@ -23,7 +23,7 @@
 </ul>
 
 {% if request.user.is_authenticated and not members or members|length < 2 %}
-<form method="post" action="{% url 'tournaments:team_join' team.id %}" class="mt-2">{% csrf_token %}
+<form method="post" action="{% url 'tournaments:team_join' team.tournament_id team.id %}" class="mt-2">{% csrf_token %}
   <button class="btn btn-sm btn-primary">Join this team</button>
 </form>
 {% endif %}
